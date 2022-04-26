@@ -37,6 +37,19 @@ import socket
 import struct
 import time
 
+import sys
+import logging
+import logging.handlers
+
+log = logging.getLogger('dmks')
+handler_kwargs = {}
+handler_kwargs['address'] = (
+                '/dev/log' if sys.platform.startswith('linux') else
+                '/var/run/syslog' if sys.platform.startswith('darwin') else  # Mac OS X
+                ('localhost', 514)  # Windows, etc.
+            )
+log.addHandler(logging.handlers.SysLogHandler(**handler_kwargs))
+
 ### state
 
 state = dict(
@@ -161,7 +174,11 @@ def on_client(sock, address):
 
             result = results.get(key)
             if result:
+                if result.successful():
+                    log.error('dmks_on_client: overwrite value for %s, result=%s', key, result)
                 result.set(value)
+            else:
+                log.error('dmks_on_client: miss value for %s', key)
 
     except Exception as e:
         if not is_disconnect(e):
