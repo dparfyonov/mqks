@@ -607,7 +607,10 @@ def _receiver(worker):
                             name, value = prop.split('=', 1)
                             msg[name] = value
 
-                        spawn(_safe_on_msg, on_msg, msg)
+                        if config.get('pool') is not None:
+                            config['pool'].spawn(_safe_on_msg, on_msg, msg)
+                        else:
+                            spawn(_safe_on_msg, on_msg, msg)
                         continue
 
                     ### eval_result
