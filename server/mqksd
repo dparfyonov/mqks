@@ -18,10 +18,10 @@ from gbn import gbn
 import gc
 from gevent import spawn
 from gevent.server import StreamServer
-import signal
 import time
 
-import os, sys
+import os
+import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))
 
 from mqks.server.config import config, init_log, log
@@ -58,7 +58,7 @@ def main():
     """
     init_log()
     try:
-        if len(sys.argv) == 3:
+        if len(sys.argv) >= 3:
             config['port_for_workers'] = int(sys.argv[1])
             config['port_for_clients'] = int(sys.argv[2])
 
@@ -84,6 +84,7 @@ def main():
 
     except Exception:
         crit()
+
 
 if __name__ == '__main__':
     main()

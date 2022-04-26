@@ -56,14 +56,43 @@ config = dict(
     seconds_before_gc=60,                               # Trying to minimize memory leaks by forcing GC from time to time.
 )
 
+# configure mqks workers
+
+from mqks.server.config.mqks_workers import mqks_workers_map
+
+mqks_servers = mqks_workers_map.keys()
+if len(sys.argv) > 3:
+    servers_arg = ''
+    for i, arg in enumerate(sys.argv[3:]):
+        i += 3
+        if arg.startswith('--mqks-servers='):
+            servers_arg = arg.split('=')[1]
+            break
+        elif arg == '--mqks-servers' and len(sys.argv) > i + 1:
+            servers_arg = sys.argv[i + 1]
+            break
+
+    if servers_arg:
+        mqks_servers = list(set([s.strip() for s in servers_arg.split(',')]))
+
+mqks_workers = []
+for s in mqks_servers:
+    mqks_workers += mqks_workers_map[s]
+
+config['workers'] = mqks_workers
+
 ### crit, log
 
 def init_log():
-    syslog_plugin = critbot.plugins.syslog.plugin(logger_name=config['logger_name'], logger_level=config['logger_level'])
-    syslog_plugin.handler.setFormatter(logging.Formatter('.%(msecs)03d %(message)s'))
+    import socket
     log = logging.getLogger(config['logger_name'])
+    try:
+        syslog_plugin = critbot.plugins.syslog.plugin(logger_name=config['logger_name'], logger_level=config['logger_level'])
+        syslog_plugin.handler.setFormatter(logging.Formatter('.%(msecs)03d %(message)s'))
 
-    crit_defaults.subject = '{environment} {logger_name}@{host} CRIT'.format(**config)
-    crit_defaults.plugins = [syslog_plugin] + config['get_extra_log_plugins']()
-    crit_defaults.crit_in_crit = log.critical
-    crit_defaults.stop_spam_file.enabled = True
+        crit_defaults.subject = '{environment} {logger_name}@{host} CRIT'.format(**config)
+        crit_defaults.plugins = [syslog_plugin] + config['get_extra_log_plugins']()
+        crit_defaults.crit_in_crit = log.critical
+        crit_defaults.stop_spam_file.enabled = True
+    except socket.error as e:
+        log.critical('Exception: %s', e)
